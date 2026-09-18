@@ -318,3 +318,6 @@ main { padding-bottom: calc(env(safe-area-inset-bottom) + 150px); }
 .row { display: flex; gap: 8px; margin-top: 12px; }
 .row .pill.wide { margin-top: 0; }
 .pill.accent { background: var(--accent); color: white; }
+
+/* Step 7: update prompt */
+.toast.tappable { pointer-events: auto; cursor: pointer; background: var(--accent); color: white; }

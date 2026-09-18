@@ -26,3 +26,6 @@ Then open http://localhost:8765 in a browser.
 ## Deploying
 
 The app is published with GitHub Pages from the `main` branch. Push to `main` and the site updates.
+
+When you change any file, bump `CACHE_VERSION` in `sw.js` so phones drop their old offline copy and
+pick up the new one. Phones show a "New version ready" toast on their next open.
