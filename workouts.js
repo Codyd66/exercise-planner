@@ -66,24 +66,68 @@ async function loadWorkouts() {
   workouts.sort((a, b) => (b.date || '').localeCompare(a.date || '') || b.createdAt - a.createdAt);
 }
 
-function renderWorkouts() {
-  workoutListEl.innerHTML = '';
-  $('workout-count').textContent = workouts.length ? String(workouts.length) : '';
-  $('workouts-empty').classList.toggle('hidden', workouts.length > 0);
-  for (const w of workouts) {
-    const li = document.createElement('li');
-    li.className = 'card workout-card';
-    li.dataset.id = w.id;
-    const name = document.createElement('p'); name.className = 'name'; name.textContent = w.name || 'Untitled workout';
-    const meta = document.createElement('p'); meta.className = 'meta';
-    meta.textContent = `${formatDate(w.date)} · ${w.items.length} exercise${w.items.length === 1 ? '' : 's'}`;
-    const preview = document.createElement('p'); preview.className = 'preview';
-    const names = w.items.map(it => (exercises.find(e => e.id === it.exerciseId) || {}).name).filter(Boolean);
-    preview.textContent = names.slice(0, 4).join(' · ') + (names.length > 4 ? ` · +${names.length - 4} more` : '');
-    li.append(name, meta);
-    if (names.length) li.append(preview);
-    workoutListEl.appendChild(li);
+function workoutCard(w) {
+  const li = document.createElement('li');
+  li.className = 'card workout-card' + (w.template ? ' template' : '');
+  li.dataset.id = w.id;
+  const name = document.createElement('p'); name.className = 'name'; name.textContent = w.name || 'Untitled workout';
+  const meta = document.createElement('p'); meta.className = 'meta';
+  const count = `${w.items.length} exercise${w.items.length === 1 ? '' : 's'}`;
+  meta.textContent = w.template ? `Template · ${count}` : `${formatDate(w.date)} · ${count}`;
+  const preview = document.createElement('p'); preview.className = 'preview';
+  const names = w.items.map(it => (exercises.find(e => e.id === it.exerciseId) || {}).name).filter(Boolean);
+  preview.textContent = names.slice(0, 4).join(' · ') + (names.length > 4 ? ` · +${names.length - 4} more` : '');
+  li.append(name, meta);
+  if (names.length) li.append(preview);
+  if (w.template) {
+    const actions = document.createElement('div'); actions.className = 'actions';
+    const use = document.createElement('button');
+    use.type = 'button'; use.className = 'pill accent'; use.textContent = 'Start from this';
+    use.addEventListener('click', ev => { ev.stopPropagation(); copyWorkout(w.id); });
+    actions.appendChild(use);
+    li.appendChild(actions);
   }
+  return li;
+}
+
+function renderWorkouts() {
+  const templates = workouts.filter(w => w.template);
+  const plain = workouts.filter(w => !w.template);
+  workoutListEl.innerHTML = '';
+  $('template-list').innerHTML = '';
+  $('templates-wrap').classList.toggle('hidden', templates.length === 0);
+  $('workout-count').textContent = plain.length ? String(plain.length) : '';
+  $('workouts-empty').classList.toggle('hidden', workouts.length > 0);
+  templates.forEach(w => $('template-list').appendChild(workoutCard(w)));
+  plain.forEach(w => workoutListEl.appendChild(workoutCard(w)));
+}
+
+// Make a fresh copy of a workout (or template) dated today and open it.
+async function copyWorkout(id) {
+  const src = workouts.find(w => w.id === id);
+  if (!src) return;
+  const copy = {
+    id: uid(),
+    name: src.name,
+    date: today(),
+    template: false,
+    items: src.items.map(it => ({ ...it })),
+    createdAt: Date.now(),
+    updatedAt: Date.now(),
+  };
+  await DB.put('workouts', copy);
+  await loadWorkouts();
+  openWorkout(copy.id);
+  toast('Copied to today');
+}
+
+async function toggleTemplate() {
+  const w = currentWorkout();
+  if (!w) return;
+  w.template = !w.template;
+  await saveWorkout(w);
+  openWorkout(w.id);
+  toast(w.template ? 'Saved as template' : 'No longer a template');
 }
 
 async function newWorkout() {
@@ -109,6 +153,9 @@ function openWorkout(id) {
   if (!w) { showView('workouts'); renderWorkouts(); return; }
   $('w-name').value = w.name;
   $('w-date').value = w.date;
+  $('w-date').classList.toggle('hidden', !!w.template);
+  $('w-template-note').classList.toggle('hidden', !w.template);
+  $('w-template').textContent = w.template ? 'Remove from templates' : 'Save as template';
   renderWorkoutItems();
   showView('workout');
 }
@@ -127,6 +174,7 @@ function renderWorkoutItems() {
     const text = document.createElement('div');
     const name = document.createElement('p'); name.className = 'name';
     name.textContent = ex ? ex.name : 'Deleted exercise';
+    if (ex) name.addEventListener('click', () => openDetails(ex));
     const sub = document.createElement('p'); sub.className = 'sub';
     if (ex) {
       const labels = [...(ex.muscleGroups || []).map(id => (tagById(id) || {}).label)].filter(Boolean);
@@ -140,10 +188,11 @@ function renderWorkoutItems() {
     const sets = numberField('Sets', it.sets, v => { it.sets = Math.max(1, parseInt(v, 10) || 1); saveWorkout(w); });
     const reps = textField('Reps', it.reps, v => { it.reps = v.trim(); saveWorkout(w); });
     const spacer = document.createElement('span'); spacer.className = 'spacer';
+    const swap = miniBtn('⇄', 'Swap for a similar exercise', () => swapItem(i)); swap.classList.add('swap'); swap.disabled = !ex;
     const up = miniBtn('▲', 'Move up', () => moveItem(i, -1)); up.disabled = i === 0;
     const down = miniBtn('▼', 'Move down', () => moveItem(i, 1)); down.disabled = i === w.items.length - 1;
     const rm = miniBtn('×', 'Remove', () => removeItem(i)); rm.classList.add('remove');
-    controls.append(sets, reps, spacer, up, down, rm);
+    controls.append(sets, reps, spacer, swap, up, down, rm);
 
     li.append(main, controls);
     workoutItemsEl.appendChild(li);
@@ -184,6 +233,52 @@ async function moveItem(i, dir) {
   [w.items[i], w.items[j]] = [w.items[j], w.items[i]];
   await saveWorkout(w);
   renderWorkoutItems();
+}
+
+async function swapItem(i) {
+  const w = currentWorkout();
+  const it = w.items[i];
+  const ex = exercises.find(e => e.id === it.exerciseId);
+  if (!ex) return;
+  const alt = findAlternative(ex, w.items.map(x => x.exerciseId), visibleExercises());
+  if (!alt) { toast('No similar exercise available'); return; }
+  w.items[i] = { ...it, exerciseId: alt.id };
+  await saveWorkout(w);
+  renderWorkoutItems();
+  toast(`Swapped for ${alt.name}`);
+}
+
+// ---------- Exercise details ----------
+
+let detailsExercise = null;
+
+function openDetails(ex) {
+  detailsExercise = ex;
+  $('d-name').textContent = ex.name;
+  const tagWrap = $('d-tags');
+  tagWrap.innerHTML = '';
+  for (const dim of DIMENSIONS) {
+    for (const id of ex[dim.field] || []) {
+      const t = tagById(id);
+      if (!t) continue;
+      const span = document.createElement('span');
+      span.className = 'tag ' + dim.key;
+      span.textContent = t.label;
+      tagWrap.appendChild(span);
+    }
+  }
+  const role = PRIORITIES.find(p => p.value === ex.priority);
+  $('d-role').textContent = role ? `${role.label}: ${role.hint}` : '';
+  $('d-description').textContent = ex.description || 'No description yet.';
+  $('d-notes').textContent = ex.notes;
+  $('d-notes-wrap').classList.toggle('hidden', !ex.notes);
+  $('details-sheet').classList.remove('hidden');
+  $('details-sheet').querySelector('.sheet-panel').scrollTop = 0;
+}
+
+function closeDetails() {
+  $('details-sheet').classList.add('hidden');
+  detailsExercise = null;
 }
 
 async function removeItem(i) {
@@ -276,7 +371,7 @@ async function runGenerator(mode) {
   const w = currentWorkout();
   if (!w) return;
   const exclude = mode === 'append' ? w.items.map(it => it.exerciseId) : [];
-  const picked = generateWorkout(genState.focus, { count: genState.count, methods: [...genState.methods], exclude }, exercises);
+  const picked = generateWorkout(genState.focus, { count: genState.count, methods: [...genState.methods], exclude }, visibleExercises());
   if (!picked.length) { alert('No matching exercises found. Try a different focus or allow more methods.'); return; }
 
   const newItems = picked.map(ex => ({ exerciseId: ex.id, ...defaultPrescription(ex) }));
@@ -326,6 +421,14 @@ $('workout-back').addEventListener('click', async () => {
 });
 $('workout-delete').addEventListener('click', deleteWorkout);
 $('w-add').addEventListener('click', startPicking);
+$('w-copy').addEventListener('click', () => currentWorkoutId && copyWorkout(currentWorkoutId));
+$('w-template').addEventListener('click', toggleTemplate);
+document.querySelectorAll('[data-close-details]').forEach(el => el.addEventListener('click', closeDetails));
+$('d-edit').addEventListener('click', () => {
+  const ex = detailsExercise;
+  closeDetails();
+  if (ex) openSheet(ex);
+});
 $('w-generate').addEventListener('click', openGenSheet);
 $('gen-replace').addEventListener('click', () => runGenerator('replace'));
 $('gen-append').addEventListener('click', () => runGenerator('append'));

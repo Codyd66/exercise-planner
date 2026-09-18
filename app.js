@@ -36,22 +36,36 @@ function newExercise() {
     movementTypes: [],
     muscleGroups: [],
     methods: [],
+    equipment: [],
     priority: 2,
+    favourite: false,
+    hidden: false,
     createdAt: Date.now(),
     updatedAt: Date.now(),
   };
 }
 
 const tagById = id => tags.find(t => t.id === id);
+
+// Hidden = hidden by hand, or every piece of equipment it needs is marked "not in my gym".
+function isHidden(e) {
+  if (e.hidden) return true;
+  const eq = e.equipment || [];
+  return eq.length > 0 && eq.every(id => (tagById(id) || {}).unavailable);
+}
+const visibleExercises = () => exercises.filter(e => !isHidden(e));
+let showHidden = false;
+let favouritesOnly = false;
 const tagsFor = dimKey => tags.filter(t => t.dimension === dimKey).sort((a, b) => a.sortOrder - b.sortOrder);
 
 // ---------- Loading ----------
 
 async function load() {
   tags = await DB.all('tags');
-  if (tags.length === 0) {
-    tags = defaultTags();
-    await DB.putMany('tags', tags);
+  const missingDefaults = defaultTags().filter(t => !tags.some(x => x.dimension === t.dimension));
+  if (missingDefaults.length) {
+    await DB.putMany('tags', missingDefaults);
+    tags = await DB.all('tags');
   }
   exercises = await DB.all('exercises');
   if (await applySeed()) exercises = await DB.all('exercises');
@@ -85,9 +99,12 @@ async function applySeed(force) {
       const mine = byId.get(s.id);
       if (!mine || !mine.builtIn) continue;
       const untouched = Math.abs((mine.updatedAt || 0) - (mine.createdAt || 0)) < 1000;
-      if (!untouched) continue;
-      toRefresh.push({ ...mine, name: s.name, description: s.description,
-        movementTypes: s.movementTypes, muscleGroups: s.muscleGroups, methods: s.methods, priority: s.priority });
+      if (untouched) {
+        toRefresh.push({ ...mine, name: s.name, description: s.description, movementTypes: s.movementTypes,
+          muscleGroups: s.muscleGroups, methods: s.methods, equipment: s.equipment, priority: s.priority });
+      } else if (!(mine.equipment || []).length && s.equipment.length) {
+        toRefresh.push({ ...mine, equipment: s.equipment });
+      }
     }
     if (toRefresh.length) await DB.putMany('exercises', toRefresh);
     refreshed = toRefresh.length;
@@ -108,6 +125,8 @@ async function restoreSeed() {
 // ---------- List and filters ----------
 
 function matches(e) {
+  if (!showHidden && isHidden(e)) return false;
+  if (favouritesOnly && !e.favourite) return false;
   const q = searchEl.value.trim().toLowerCase();
   if (q && !(e.name + ' ' + e.description + ' ' + e.notes).toLowerCase().includes(q)) return false;
   // Within one dimension: match any selected tag. Across dimensions: all must match.
@@ -134,14 +153,27 @@ function render() {
   const n = activeFilterCount();
   filterToggle.textContent = n ? `Filters (${n})` : 'Filters';
   filterToggle.classList.toggle('active', n > 0);
-  filterClear.classList.toggle('hidden', n === 0);
+  filterClear.classList.toggle('hidden', n === 0 && !favouritesOnly && !showHidden);
+  const hiddenCount = exercises.filter(isHidden).length;
+  $('fav-toggle').classList.toggle('active', favouritesOnly);
+  $('hidden-toggle').textContent = showHidden ? 'Hide hidden' : `Hidden (${hiddenCount})`;
+  $('hidden-toggle').classList.toggle('active', showHidden);
+  $('hidden-toggle').classList.toggle('hidden', hiddenCount === 0 && !showHidden);
 
   listEl.innerHTML = '';
   for (const e of shown) {
     const li = document.createElement('li');
     li.className = 'card';
     li.dataset.id = e.id;
+    if (isHidden(e)) li.classList.add('is-hidden');
+    const head = document.createElement('div'); head.className = 'card-head';
     const name = document.createElement('p'); name.className = 'name'; name.textContent = e.name;
+    const star = document.createElement('button');
+    star.type = 'button'; star.className = 'star' + (e.favourite ? ' on' : '');
+    star.textContent = e.favourite ? '★' : '☆';
+    star.setAttribute('aria-label', e.favourite ? 'Remove from favourites' : 'Add to favourites');
+    star.addEventListener('click', ev => { ev.stopPropagation(); toggleFavourite(e); });
+    head.append(name, star);
     const desc = document.createElement('p'); desc.className = 'desc'; desc.textContent = e.description;
     const tagWrap = document.createElement('div'); tagWrap.className = 'tags';
     for (const dim of DIMENSIONS) {
@@ -154,7 +186,7 @@ function render() {
         tagWrap.appendChild(span);
       }
     }
-    li.append(name);
+    li.append(head);
     if (e.description) li.append(desc);
     if (tagWrap.children.length) li.append(tagWrap);
     listEl.appendChild(li);
@@ -192,8 +224,16 @@ function renderFilters() {
   }
 }
 
+async function toggleFavourite(e) {
+  e.favourite = !e.favourite;
+  await DB.put('exercises', e);
+  render();
+}
+
 function clearFilters() {
   DIMENSIONS.forEach(d => filter[d.key].clear());
+  favouritesOnly = false;
+  showHidden = false;
   renderFilters();
   render();
 }
@@ -239,6 +279,8 @@ function openSheet(exercise) {
   formTags = {};
   DIMENSIONS.forEach(d => { formTags[d.key] = new Set(exercise ? exercise[d.field] : []); });
   formPriority = exercise ? exercise.priority : 2;
+  $('f-favourite').checked = !!(exercise && exercise.favourite);
+  $('f-hidden').checked = !!(exercise && exercise.hidden);
   renderFormTags();
   deleteBtn.classList.toggle('hidden', !exercise);
   sheet.classList.remove('hidden');
@@ -264,11 +306,15 @@ async function save(ev) {
   item.notes = $('f-notes').value.trim();
   DIMENSIONS.forEach(d => { item[d.field] = [...formTags[d.key]]; });
   item.priority = formPriority;
+  item.favourite = $('f-favourite').checked;
+  item.hidden = $('f-hidden').checked;
   item.updatedAt = Date.now();
 
   await DB.put('exercises', item);
   closeSheet();
   await load();
+  // If a workout is open behind the form, refresh its rows too (names may have changed).
+  if (typeof renderWorkoutItems === 'function' && currentWorkoutId && !$('view-workout').classList.contains('hidden')) renderWorkoutItems();
 }
 
 async function remove() {
@@ -297,6 +343,14 @@ function renderTagsEditor() {
       input.type = 'text';
       input.value = t.label;
       input.addEventListener('change', () => renameTag(t.id, input.value));
+      if (dim.key === 'equipment') {
+        const avail = document.createElement('button');
+        avail.type = 'button';
+        avail.className = 'avail' + (t.unavailable ? ' off' : '');
+        avail.textContent = t.unavailable ? 'Not in my gym' : 'In my gym';
+        avail.addEventListener('click', () => setAvailability(t.id, !t.unavailable));
+        row.appendChild(avail);
+      }
       const rm = document.createElement('button');
       rm.type = 'button';
       rm.className = 'remove';
@@ -335,6 +389,23 @@ async function addTag(dimKey, label) {
   const preferred = defaultTagId(dimKey, label);
   const id = tagById(preferred) ? uid() : preferred;
   await DB.put('tags', { id, dimension: dimKey, label, sortOrder });
+  await load();
+  renderTagsEditor();
+}
+
+async function setAvailability(id, unavailable) {
+  const t = tagById(id);
+  if (!t) return;
+  await DB.put('tags', { ...t, unavailable });
+  await load();
+  renderTagsEditor();
+}
+
+async function deleteHiddenExercises() {
+  const hidden = exercises.filter(isHidden);
+  if (!hidden.length) { alert('There are no hidden exercises.'); return; }
+  if (!confirm(`Permanently delete ${hidden.length} hidden exercise${hidden.length === 1 ? '' : 's'}? Built-ins can be brought back with Restore.`)) return;
+  await Promise.all(hidden.map(e => DB.remove('exercises', e.id)));
   await load();
   renderTagsEditor();
 }
@@ -396,11 +467,16 @@ listEl.addEventListener('click', ev => {
 sheet.querySelectorAll('[data-close]').forEach(el => el.addEventListener('click', closeSheet));
 $('tags-btn').addEventListener('click', openTagsSheet);
 $('restore-btn').addEventListener('click', restoreSeed);
+$('delete-hidden-btn').addEventListener('click', deleteHiddenExercises);
+$('fav-toggle').addEventListener('click', () => { favouritesOnly = !favouritesOnly; render(); });
+$('hidden-toggle').addEventListener('click', () => { showHidden = !showHidden; render(); });
 tagsSheet.querySelectorAll('[data-close-tags]').forEach(el => el.addEventListener('click', closeTagsSheet));
 document.addEventListener('keydown', ev => {
   if (ev.key !== 'Escape') return;
   const gen = $('gen-sheet');
-  if (gen && !gen.classList.contains('hidden')) closeGenSheet();
+  const det = $('details-sheet');
+  if (det && !det.classList.contains('hidden')) closeDetails();
+  else if (gen && !gen.classList.contains('hidden')) closeGenSheet();
   else if (!tagsSheet.classList.contains('hidden')) closeTagsSheet();
   else if (!sheet.classList.contains('hidden')) closeSheet();
 });

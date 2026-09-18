@@ -20,6 +20,12 @@ const DIMENSIONS = [
     label: 'Method',
     defaults: ['Weightlifting', 'Calisthenics', 'Cardio', 'Mobility'],
   },
+  {
+    key: 'equipment',
+    field: 'equipment',
+    label: 'Equipment',
+    defaults: ['Barbell', 'Dumbbell', 'Kettlebell', 'Cable', 'Machine', 'Smith machine', 'Landmine', 'Pull-up / dip bar', 'Bodyweight', 'Band', 'Cardio machine', 'Other'],
+  },
 ];
 
 const PRIORITIES = [

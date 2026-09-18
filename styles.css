@@ -321,3 +321,38 @@ main { padding-bottom: calc(env(safe-area-inset-bottom) + 150px); }
 
 /* Step 7: update prompt */
 .toast.tappable { pointer-events: auto; cursor: pointer; background: var(--accent); color: white; }
+
+/* Equipment, favourites, hidden, details, templates */
+.tag.equipment { color: #d9b8ff; }
+.card-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
+.card-head .name { flex: 1; }
+.star {
+  background: none; border: none; color: var(--muted); font-size: 20px; line-height: 1;
+  padding: 0 2px; cursor: pointer; flex: 0 0 auto;
+}
+.star.on { color: #ffd166; }
+.card.is-hidden { opacity: .5; }
+.card.is-hidden .name::after { content: ' · hidden'; color: var(--muted); font-weight: 400; font-size: 13px; }
+#fav-toggle { padding: 8px 12px; font-size: 16px; line-height: 1; }
+#fav-toggle.active { background: #ffd166; color: #1a1d24; }
+.pill.active { background: var(--accent); color: white; }
+
+.switch { flex-direction: row; align-items: center; gap: 10px; }
+.switch input { width: auto; accent-color: var(--accent); width: 20px; height: 20px; }
+.switch > span { font-size: 15px; color: var(--text); }
+
+.tag-row .avail {
+  background: var(--surface-2); border: none; border-radius: 8px; color: #b6f2a4;
+  font: inherit; font-size: 12px; padding: 8px 10px; cursor: pointer; white-space: nowrap;
+}
+.tag-row .avail.off { color: var(--danger); }
+
+.item-main .name { cursor: pointer; }
+.item-main .name::after { content: ' ›'; color: var(--muted); }
+.item-controls .mini.swap { color: var(--accent); }
+.details-text { margin: 0; line-height: 1.5; white-space: pre-line; }
+
+.section { font-size: 13px; color: var(--muted); font-weight: 600; margin: 14px 0 8px; text-transform: uppercase; letter-spacing: .04em; }
+.workout-card.template { border-left: 3px solid var(--accent); }
+.workout-card .actions { display: flex; gap: 8px; margin-top: 10px; }
+.workout-card .actions .pill { padding: 6px 12px; font-size: 13px; }

@@ -120,7 +120,8 @@ function generateWorkout(focusKey, options, library) {
     // Strongly prefer exercises whose primary (first-listed) muscle is the slot's target.
     const primary = candidates.filter(isPrimary);
     if (primary.length >= 2) candidates = primary;
-    const chosen = weightedPick(candidates, e => isPrimary(e) ? 3 : 1);
+    // Favourites are picked about three times as often.
+    const chosen = weightedPick(candidates, e => (isPrimary(e) ? 3 : 1) * (e.favourite ? 3 : 1));
     used.add(chosen.id);
     picked.push({ exercise: chosen, role: slot.role, index });
   });
@@ -128,4 +129,27 @@ function generateWorkout(focusKey, options, library) {
   // Order the session: main lifts first, then secondary, then isolation.
   picked.sort((a, b) => a.role - b.role || a.index - b.index);
   return picked.map(p => p.exercise);
+}
+
+// Find a random stand-in for one exercise: same role and same main muscle where
+// possible, loosening the match if nothing fits. Used by the Swap button.
+function findAlternative(exercise, excludeIds, library) {
+  const used = new Set(excludeIds || []);
+  used.add(exercise.id);
+  const primary = (exercise.muscleGroups || [])[0];
+  const anyMuscle = new Set(exercise.muscleGroups || []);
+  const method = (exercise.methods || [])[0];
+  const pool = library.filter(e => !used.has(e.id) && (!method || (e.methods || []).includes(method)));
+
+  const attempts = [
+    e => e.priority === exercise.priority && (e.muscleGroups || [])[0] === primary,
+    e => e.priority === exercise.priority && (e.muscleGroups || []).some(m => anyMuscle.has(m)),
+    e => (e.muscleGroups || [])[0] === primary,
+    e => (e.muscleGroups || []).some(m => anyMuscle.has(m)),
+  ];
+  for (const fits of attempts) {
+    const candidates = pool.filter(fits);
+    if (candidates.length) return weightedPick(candidates, e => e.favourite ? 3 : 1);
+  }
+  return null;
 }

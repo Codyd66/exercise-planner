@@ -33,6 +33,8 @@
 
     <div class="filter-bar">
       <button id="filter-toggle" class="pill">Filters</button>
+      <button id="fav-toggle" class="pill" aria-label="Favourites only">&#9733;</button>
+      <button id="hidden-toggle" class="pill hidden">Hidden</button>
       <button id="filter-clear" class="link small hidden">Clear</button>
     </div>
     <div id="filters" class="filters hidden"></div>
@@ -55,6 +57,11 @@
       <span id="workout-count" class="count"></span>
     </header>
     <main>
+      <div id="templates-wrap" class="hidden">
+        <h3 class="section">Templates</h3>
+        <ul id="template-list" class="list"></ul>
+        <h3 class="section">Workouts</h3>
+      </div>
       <ul id="workout-list" class="list"></ul>
       <p id="workouts-empty" class="empty hidden">No workouts yet. Tap <strong>+</strong> to plan one.</p>
     </main>
@@ -69,13 +76,40 @@
     <main>
       <input id="w-name" class="title-input" type="text" placeholder="Workout name" autocomplete="off">
       <input id="w-date" class="date-input" type="date">
+      <p id="w-template-note" class="hint hidden">This is a template. Copy it to start a new workout from it.</p>
       <ol id="workout-items" class="list items"></ol>
       <p id="workout-empty" class="empty hidden">No exercises yet. Add some below.</p>
       <div class="row">
         <button id="w-add" class="pill wide">+ Add exercises</button>
         <button id="w-generate" class="pill wide accent">&#10024; Generate</button>
       </div>
+      <div class="row">
+        <button id="w-copy" class="pill wide">Copy to today</button>
+        <button id="w-template" class="pill wide">Save as template</button>
+      </div>
     </main>
+  </div>
+
+  <!-- Exercise details -->
+  <div id="details-sheet" class="sheet hidden" role="dialog" aria-modal="true">
+    <div class="sheet-backdrop" data-close-details></div>
+    <div class="sheet-panel">
+      <div class="sheet-header">
+        <button type="button" class="link" data-close-details>Close</button>
+        <h2 id="d-name">Exercise</h2>
+        <button type="button" id="d-edit" class="link strong">Edit</button>
+      </div>
+      <div id="d-tags" class="tags"></div>
+      <p id="d-role" class="hint"></p>
+      <div class="field">
+        <span class="field-label">How to do it</span>
+        <p id="d-description" class="details-text"></p>
+      </div>
+      <div class="field" id="d-notes-wrap">
+        <span class="field-label">Notes</span>
+        <p id="d-notes" class="details-text"></p>
+      </div>
+    </div>
   </div>
 
   <!-- Generate sheet -->
@@ -153,6 +187,15 @@
         <textarea id="f-notes" name="notes" rows="2" placeholder="Working weight, tips, anything else"></textarea>
       </label>
 
+      <label class="switch">
+        <input type="checkbox" id="f-favourite">
+        <span>&#9733; Favourite (the generator picks it more often)</span>
+      </label>
+      <label class="switch">
+        <input type="checkbox" id="f-hidden">
+        <span>Hide from the library and generator</span>
+      </label>
+
       <button type="button" id="delete-btn" class="danger hidden">Delete exercise</button>
     </form>
   </div>
@@ -166,7 +209,7 @@
         <h2>Settings</h2>
         <button type="button" class="link strong" data-close-tags>Done</button>
       </div>
-      <p class="hint">Tap a name to rename it. Removing a tag also removes it from every exercise.</p>
+      <p class="hint">Tap a name to rename it. Removing a tag also removes it from every exercise. Mark equipment as "Not in my gym" to hide every exercise that needs it.</p>
       <div id="tags-editor"></div>
 
       <div class="tag-group">
@@ -182,7 +225,10 @@
       <div class="tag-group">
         <h3>Built-in library</h3>
         <p class="hint" id="library-hint"></p>
-        <button type="button" id="restore-btn" class="pill">Restore built-in exercises</button>
+        <div class="row">
+          <button type="button" id="restore-btn" class="pill wide">Restore built-in exercises</button>
+          <button type="button" id="delete-hidden-btn" class="pill wide">Delete hidden exercises</button>
+        </div>
       </div>
     </div>
   </div>

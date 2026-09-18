@@ -6,7 +6,7 @@
 //   from the network in the background, so the next open gets new files.
 // - Bump CACHE_VERSION whenever files change; the old cache is deleted.
 
-const CACHE_VERSION = 'v2';
+const CACHE_VERSION = 'v3';
 const CACHE = 'exercise-planner-' + CACHE_VERSION;
 
 const ASSETS = [
