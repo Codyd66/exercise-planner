@@ -74,8 +74,27 @@ async function applySeed(force) {
     toAdd.push({ ...s, createdAt: Date.now(), updatedAt: Date.now() });
   }
   if (toAdd.length) await DB.putMany('exercises', toAdd);
-  await DB.put('meta', { id: 'seed', applied: [...applied] });
-  return toAdd.length;
+
+  // When the built-in library improves (better descriptions, tags), refresh the
+  // built-ins on this device that have never been edited. Edited ones are kept.
+  let refreshed = 0;
+  if ((meta.seedVersion || 1) < SEED_VERSION) {
+    const byId = new Map(exercises.map(e => [e.id, e]));
+    const toRefresh = [];
+    for (const s of seedExercises()) {
+      const mine = byId.get(s.id);
+      if (!mine || !mine.builtIn) continue;
+      const untouched = Math.abs((mine.updatedAt || 0) - (mine.createdAt || 0)) < 1000;
+      if (!untouched) continue;
+      toRefresh.push({ ...mine, name: s.name, description: s.description,
+        movementTypes: s.movementTypes, muscleGroups: s.muscleGroups, methods: s.methods, priority: s.priority });
+    }
+    if (toRefresh.length) await DB.putMany('exercises', toRefresh);
+    refreshed = toRefresh.length;
+  }
+
+  await DB.put('meta', { id: 'seed', applied: [...applied], seedVersion: SEED_VERSION });
+  return toAdd.length + refreshed;
 }
 
 async function restoreSeed() {
