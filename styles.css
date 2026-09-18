@@ -1,0 +1,320 @@
+:root {
+  --bg: #1a1d24;
+  --surface: #242832;
+  --surface-2: #2e333f;
+  --text: #f2f3f5;
+  --muted: #9aa0ad;
+  --accent: #4f8cff;
+  --danger: #ff5c5c;
+  --radius: 12px;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  font-size: 16px;
+  -webkit-text-size-adjust: 100%;
+}
+
+.hidden { display: none !important; }
+
+.topbar {
+  position: sticky;
+  top: 0;
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  padding: calc(env(safe-area-inset-top) + 16px) 16px 8px;
+  background: var(--bg);
+  z-index: 5;
+}
+.topbar h1 { margin: 0; font-size: 28px; }
+.count { color: var(--muted); font-size: 14px; }
+
+main { padding: 0 16px calc(env(safe-area-inset-bottom) + 96px); }
+
+.search-wrap { margin: 8px 0 12px; }
+input, textarea {
+  width: 100%;
+  padding: 12px 14px;
+  border: none;
+  border-radius: var(--radius);
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+}
+input:focus, textarea:focus { outline: 2px solid var(--accent); }
+textarea { resize: vertical; }
+
+.list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.card {
+  background: var(--surface);
+  border-radius: var(--radius);
+  padding: 14px;
+  cursor: pointer;
+}
+.card:active { background: var(--surface-2); }
+.card .name { font-weight: 600; font-size: 17px; margin: 0 0 4px; }
+.card .desc { color: var(--muted); font-size: 14px; margin: 0; white-space: pre-line; }
+
+.empty { color: var(--muted); text-align: center; margin-top: 48px; }
+
+.fab {
+  position: fixed;
+  right: 20px;
+  bottom: calc(env(safe-area-inset-bottom) + 20px);
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  border: none;
+  background: var(--accent);
+  color: white;
+  font-size: 32px;
+  line-height: 1;
+  box-shadow: 0 6px 16px rgba(0,0,0,.4);
+  cursor: pointer;
+  z-index: 6;
+}
+
+/* Bottom sheet */
+.sheet { position: fixed; inset: 0; z-index: 10; }
+.sheet-backdrop { position: absolute; inset: 0; background: rgba(0,0,0,.5); }
+.sheet-panel {
+  position: absolute;
+  left: 0; right: 0; bottom: 0;
+  max-height: 92vh;
+  overflow-y: auto;
+  background: var(--bg);
+  border-radius: 18px 18px 0 0;
+  padding: 12px 16px calc(env(safe-area-inset-bottom) + 24px);
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.sheet-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 4px;
+}
+.sheet-header h2 { margin: 0; font-size: 17px; }
+.link {
+  background: none;
+  border: none;
+  color: var(--accent);
+  font: inherit;
+  padding: 8px 0;
+  cursor: pointer;
+}
+.link.strong { font-weight: 600; }
+
+label { display: flex; flex-direction: column; gap: 6px; }
+label > span { font-size: 13px; color: var(--muted); }
+
+.danger {
+  margin-top: 8px;
+  padding: 12px;
+  border: none;
+  border-radius: var(--radius);
+  background: transparent;
+  color: var(--danger);
+  font: inherit;
+  cursor: pointer;
+}
+
+/* Step 2: tags and filters */
+.icon-btn {
+  margin-left: auto;
+  background: none;
+  border: none;
+  color: var(--muted);
+  font-size: 22px;
+  cursor: pointer;
+  padding: 4px 6px;
+}
+
+.filter-bar { display: flex; align-items: center; gap: 12px; margin-bottom: 10px; }
+.pill {
+  background: var(--surface);
+  border: none;
+  border-radius: 999px;
+  color: var(--text);
+  font: inherit;
+  font-size: 14px;
+  padding: 8px 14px;
+  cursor: pointer;
+}
+.pill.active { background: var(--accent); }
+.link.small { font-size: 14px; padding: 4px 0; }
+
+.filters { display: flex; flex-direction: column; gap: 10px; margin-bottom: 14px; }
+.field { display: flex; flex-direction: column; gap: 6px; }
+.field-label { font-size: 13px; color: var(--muted); }
+
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chips.scroll { flex-wrap: nowrap; overflow-x: auto; padding-bottom: 4px; -webkit-overflow-scrolling: touch; }
+.chips.scroll::-webkit-scrollbar { display: none; }
+.chip {
+  flex: 0 0 auto;
+  background: var(--surface-2);
+  border: none;
+  border-radius: 999px;
+  color: var(--text);
+  font: inherit;
+  font-size: 14px;
+  padding: 7px 12px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.chip.on { background: var(--accent); color: white; }
+
+.card .tags { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 8px; }
+.tag {
+  font-size: 12px;
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: var(--surface-2);
+  color: var(--muted);
+}
+.tag.movement { color: #8fd3ff; }
+.tag.muscle { color: #ffc98a; }
+.tag.method { color: #b6f2a4; }
+
+.hint { color: var(--muted); font-size: 13px; margin: 0; }
+
+.tag-group { display: flex; flex-direction: column; gap: 6px; margin-top: 8px; }
+.tag-group h3 { margin: 6px 0 2px; font-size: 14px; color: var(--muted); font-weight: 600; }
+.tag-row { display: flex; gap: 6px; align-items: center; }
+.tag-row input { flex: 1; padding: 9px 12px; }
+.tag-row .remove {
+  background: none;
+  border: none;
+  color: var(--muted);
+  font-size: 20px;
+  padding: 4px 8px;
+  cursor: pointer;
+}
+.tag-row .add {
+  background: var(--accent);
+  border: none;
+  border-radius: var(--radius);
+  color: white;
+  font: inherit;
+  padding: 9px 14px;
+  cursor: pointer;
+}
+
+/* Step 4: workouts */
+main { padding-bottom: calc(env(safe-area-inset-bottom) + 150px); }
+
+.tabbar {
+  position: fixed;
+  left: 0; right: 0; bottom: 0;
+  display: flex;
+  background: var(--surface);
+  border-top: 1px solid var(--surface-2);
+  padding-bottom: env(safe-area-inset-bottom);
+  z-index: 5;
+}
+.tab {
+  flex: 1;
+  background: none;
+  border: none;
+  color: var(--muted);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  padding: 14px 0;
+  cursor: pointer;
+}
+.tab.active { color: var(--accent); }
+
+.fab { bottom: calc(env(safe-area-inset-bottom) + 72px); }
+
+.topbar.slim { justify-content: space-between; padding-bottom: 4px; }
+.danger-text { color: var(--danger); }
+
+.pick-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 0 16px 8px;
+  padding: 10px 14px;
+  border-radius: var(--radius);
+  background: var(--accent);
+  color: white;
+  font-size: 14px;
+}
+.pick-banner .link { color: white; padding: 0; }
+
+.title-input {
+  font-size: 22px;
+  font-weight: 700;
+  margin-bottom: 8px;
+}
+.date-input { margin-bottom: 14px; color: var(--muted); font-size: 14px; }
+.date-input::-webkit-calendar-picker-indicator { filter: invert(0.7); }
+
+.pill.wide { width: 100%; margin-top: 12px; padding: 12px; font-weight: 600; }
+
+.items .item {
+  background: var(--surface);
+  border-radius: var(--radius);
+  padding: 12px 14px;
+}
+.item-main { display: flex; gap: 10px; align-items: baseline; }
+.item-main .pos { color: var(--muted); font-size: 14px; min-width: 18px; }
+.item-main .name { font-weight: 600; font-size: 16px; margin: 0; }
+.item-main .sub { color: var(--muted); font-size: 13px; margin: 2px 0 0; }
+.item-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 10px;
+}
+.item-controls label { flex-direction: row; align-items: center; gap: 6px; }
+.item-controls label > span { font-size: 12px; }
+.item-controls input { width: 58px; padding: 7px 8px; text-align: center; font-size: 14px; }
+.item-controls .spacer { flex: 1; }
+.item-controls .mini {
+  background: var(--surface-2);
+  border: none;
+  border-radius: 8px;
+  color: var(--text);
+  font-size: 14px;
+  width: 34px;
+  height: 34px;
+  cursor: pointer;
+}
+.item-controls .mini:disabled { opacity: .3; cursor: default; }
+.item-controls .mini.remove { color: var(--danger); }
+.item.missing .name { color: var(--muted); font-style: italic; }
+
+.workout-card .meta { color: var(--muted); font-size: 13px; margin: 2px 0 0; }
+.workout-card .preview { color: var(--muted); font-size: 13px; margin: 6px 0 0; }
+
+.toast {
+  position: fixed;
+  left: 50%;
+  bottom: calc(env(safe-area-inset-bottom) + 140px);
+  transform: translateX(-50%);
+  background: var(--text);
+  color: var(--bg);
+  padding: 10px 16px;
+  border-radius: 999px;
+  font-size: 14px;
+  font-weight: 600;
+  z-index: 20;
+  pointer-events: none;
+  white-space: nowrap;
+}
+
+/* Step 5: generator */
+.row { display: flex; gap: 8px; margin-top: 12px; }
+.row .pill.wide { margin-top: 0; }
+.pill.accent { background: var(--accent); color: white; }

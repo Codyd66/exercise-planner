@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#1a1d24">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <title>Exercise Planner</title>
+  <meta name="apple-mobile-web-app-title" content="Exercises">
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" type="image/png" href="icons/favicon.png">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div id="view-exercises" class="view">
+  <header class="topbar">
+    <h1>Exercises</h1>
+    <span id="count" class="count"></span>
+    <button id="tags-btn" class="icon-btn" aria-label="Settings" title="Settings">&#9881;</button>
+  </header>
+
+  <div id="pick-banner" class="pick-banner hidden">
+    <span id="pick-text">Tap an exercise to add it</span>
+    <button id="pick-done" class="link strong">Done</button>
+  </div>
+
+  <main>
+    <div class="search-wrap">
+      <input id="search" type="search" placeholder="Search exercises" autocomplete="off">
+    </div>
+
+    <div class="filter-bar">
+      <button id="filter-toggle" class="pill">Filters</button>
+      <button id="filter-clear" class="link small hidden">Clear</button>
+    </div>
+    <div id="filters" class="filters hidden"></div>
+
+    <ul id="list" class="list"></ul>
+
+    <p id="empty" class="empty hidden">
+      No exercises yet. Tap <strong>+</strong> to add your first one.
+    </p>
+    <p id="no-match" class="empty hidden">
+      Nothing matches these filters.
+    </p>
+  </main>
+  </div>
+
+  <!-- Workouts list -->
+  <div id="view-workouts" class="view hidden">
+    <header class="topbar">
+      <h1>Workouts</h1>
+      <span id="workout-count" class="count"></span>
+    </header>
+    <main>
+      <ul id="workout-list" class="list"></ul>
+      <p id="workouts-empty" class="empty hidden">No workouts yet. Tap <strong>+</strong> to plan one.</p>
+    </main>
+  </div>
+
+  <!-- Single workout -->
+  <div id="view-workout" class="view hidden">
+    <header class="topbar slim">
+      <button id="workout-back" class="link">&#8249; Workouts</button>
+      <button id="workout-delete" class="link danger-text">Delete</button>
+    </header>
+    <main>
+      <input id="w-name" class="title-input" type="text" placeholder="Workout name" autocomplete="off">
+      <input id="w-date" class="date-input" type="date">
+      <ol id="workout-items" class="list items"></ol>
+      <p id="workout-empty" class="empty hidden">No exercises yet. Add some below.</p>
+      <div class="row">
+        <button id="w-add" class="pill wide">+ Add exercises</button>
+        <button id="w-generate" class="pill wide accent">&#10024; Generate</button>
+      </div>
+    </main>
+  </div>
+
+  <!-- Generate sheet -->
+  <div id="gen-sheet" class="sheet hidden" role="dialog" aria-modal="true">
+    <div class="sheet-backdrop" data-close-gen></div>
+    <div class="sheet-panel">
+      <div class="sheet-header">
+        <button type="button" class="link" data-close-gen>Cancel</button>
+        <h2>Generate a workout</h2>
+        <span></span>
+      </div>
+
+      <div class="field">
+        <span class="field-label">Focus</span>
+        <div id="gen-focus" class="chips"></div>
+      </div>
+
+      <div class="field">
+        <span class="field-label">Number of exercises</span>
+        <div id="gen-count" class="chips"></div>
+      </div>
+
+      <div class="field">
+        <span class="field-label">Pick from</span>
+        <div id="gen-methods" class="chips"></div>
+      </div>
+
+      <p class="hint">Main lifts come first, then secondary movements, then isolation work. Tap Generate again for a different mix.</p>
+
+      <div id="gen-actions" class="row">
+        <button type="button" id="gen-replace" class="pill wide accent">Generate</button>
+        <button type="button" id="gen-append" class="pill wide hidden">Add to workout</button>
+      </div>
+    </div>
+  </div>
+
+  <nav class="tabbar">
+    <button class="tab active" data-tab="exercises">Exercises</button>
+    <button class="tab" data-tab="workouts">Workouts</button>
+  </nav>
+
+  <div id="toast" class="toast hidden"></div>
+
+  <button id="add-btn" class="fab" aria-label="Add">+</button>
+
+  <!-- Add / edit sheet -->
+  <div id="sheet" class="sheet hidden" role="dialog" aria-modal="true">
+    <div class="sheet-backdrop" data-close></div>
+    <form id="form" class="sheet-panel">
+      <div class="sheet-header">
+        <button type="button" class="link" data-close>Cancel</button>
+        <h2 id="sheet-title">New exercise</h2>
+        <button type="submit" class="link strong">Save</button>
+      </div>
+
+      <label>
+        <span>Name</span>
+        <input id="f-name" name="name" type="text" required autocomplete="off" placeholder="e.g. Barbell back squat">
+      </label>
+
+      <label>
+        <span>Description / form cues</span>
+        <textarea id="f-description" name="description" rows="3" placeholder="Brace, sit back, knees track over toes"></textarea>
+      </label>
+
+      <div id="form-tags"></div>
+
+      <div class="field">
+        <span class="field-label">Role in a workout</span>
+        <div id="f-priority" class="chips"></div>
+      </div>
+
+      <label>
+        <span>Notes (optional)</span>
+        <textarea id="f-notes" name="notes" rows="2" placeholder="Working weight, tips, anything else"></textarea>
+      </label>
+
+      <button type="button" id="delete-btn" class="danger hidden">Delete exercise</button>
+    </form>
+  </div>
+
+  <!-- Manage tags sheet -->
+  <div id="tags-sheet" class="sheet hidden" role="dialog" aria-modal="true">
+    <div class="sheet-backdrop" data-close-tags></div>
+    <div class="sheet-panel">
+      <div class="sheet-header">
+        <span></span>
+        <h2>Settings</h2>
+        <button type="button" class="link strong" data-close-tags>Done</button>
+      </div>
+      <p class="hint">Tap a name to rename it. Removing a tag also removes it from every exercise.</p>
+      <div id="tags-editor"></div>
+
+      <div class="tag-group">
+        <h3>Backup</h3>
+        <p class="hint">Export saves everything (exercises, tags, workouts) to a file you can keep or send to someone. Import merges a backup file into this phone without overwriting your own changes.</p>
+        <div class="row">
+          <button type="button" id="export-btn" class="pill wide">Export backup</button>
+          <button type="button" id="import-btn" class="pill wide">Import backup</button>
+        </div>
+        <input type="file" id="import-file" accept=".json,application/json" class="hidden">
+      </div>
+
+      <div class="tag-group">
+        <h3>Built-in library</h3>
+        <p class="hint" id="library-hint"></p>
+        <button type="button" id="restore-btn" class="pill">Restore built-in exercises</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="db.js"></script>
+  <script src="tags.js"></script>
+  <script src="seed.js"></script>
+  <script src="app.js"></script>
+  <script src="generator.js"></script>
+  <script src="workouts.js"></script>
+  <script src="backup.js"></script>
+</body>
+</html>
